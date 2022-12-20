@@ -85,7 +85,7 @@ def cfr(cards, history, p0, p1, time):
 
     for a in range(NUM_ACTIONS):
         regret = util[a] - nodeUtil
-        node.regretSum[a] += realizationWeight * regret # why is this?
+        node.regretSum[a] += ((p1 if player == 0 else p0) * regret) # pi_i_negative
     
     return nodeUtil
 
@@ -98,12 +98,13 @@ def train(iterations):
         if(i % (iterations // 10) == 0):
             print("Iteration number: {}/{}".format(i, iterations))
             logInfosets()
+            print("Avg, utility for player 1: {:.4f}".format(util / (i + 1)))
 
 def logInfosets():
     infoSets = sorted(nodeMap.keys())
     for node in infoSets:
         print(nodeMap[node])
 
-iterations = 100000
+iterations = 1000000
 train(iterations)
     
