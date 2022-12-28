@@ -105,6 +105,21 @@ def logInfosets():
     for node in infoSets:
         print(nodeMap[node])
 
-iterations = 1000000
-train(iterations)
+def testKuhnPoker():
+    epsilon = 1e-2
+    iterations = 250000
+    train(iterations)
+    testVectorEquality(nodeMap['3p'].getAverageStrategy(), [0, 1], epsilon)
+    testVectorEquality(nodeMap['3b'].getAverageStrategy(), [0, 1], epsilon)
+    testVectorEquality(nodeMap['2p'].getAverageStrategy(), [1, 0], epsilon)
+    testVectorEquality(nodeMap['2b'].getAverageStrategy(), [2/3, 1/3], epsilon)
+    testVectorEquality(nodeMap['1p'].getAverageStrategy(), [2/3, 1/3], epsilon)
+    testVectorEquality(nodeMap['1b'].getAverageStrategy(), [1, 0], epsilon)
+
+def testVectorEquality(v, w, epsilon):
+    for x, y in zip(v, w):
+        print(x,y)
+        assert x < y + epsilon and x > y - epsilon
+
+testKuhnPoker()       
     
