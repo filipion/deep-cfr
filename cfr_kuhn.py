@@ -97,7 +97,6 @@ def train(iterations):
         util += cfr(cards, '', 1.0, 1.0, i)
         if(i % (iterations // 10) == 0):
             print("Iteration number: {}/{}".format(i, iterations))
-            logInfosets()
             print("Avg, utility for player 1: {:.4f}".format(util / (i + 1)))
 
 def logInfosets():
@@ -116,9 +115,16 @@ def testKuhnPoker():
     testVectorEquality(nodeMap['1p'].getAverageStrategy(), [2/3, 1/3], epsilon)
     testVectorEquality(nodeMap['1b'].getAverageStrategy(), [1, 0], epsilon)
 
+    alpha = nodeMap['1'].getAverageStrategy()[1]
+    testVectorEquality(nodeMap['1'].getAverageStrategy(), [1 - alpha, alpha], epsilon)
+    testVectorEquality(nodeMap['2'].getAverageStrategy(), [1, 0], epsilon)
+    testVectorEquality(nodeMap['3'].getAverageStrategy(), [1 - 3 * alpha, 3 * alpha], epsilon)
+    testVectorEquality(nodeMap['1pb'].getAverageStrategy(), [1, 0], epsilon)
+    testVectorEquality(nodeMap['2pb'].getAverageStrategy(), [2/3 - alpha, 1/3 + alpha], epsilon)
+    testVectorEquality(nodeMap['3pb'].getAverageStrategy(), [0, 1], epsilon)
+
 def testVectorEquality(v, w, epsilon):
     for x, y in zip(v, w):
-        print(x,y)
         assert x < y + epsilon and x > y - epsilon
 
 testKuhnPoker()       
