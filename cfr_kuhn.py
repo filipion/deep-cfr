@@ -10,7 +10,6 @@ class KuhnNode():
     def __init__(self, infoSet):
         self.infoSet = infoSet
         self.regretSum = [0 for _ in range(NUM_ACTIONS)]
-        self.strategy = [0 for _ in range(NUM_ACTIONS)]
         self.strategySum = [0 for _ in range(NUM_ACTIONS)]
 
     def __repr__(self):
@@ -18,19 +17,20 @@ class KuhnNode():
             strategy=["{:.2f}".format(x) for x in self.getAverageStrategy()])
 
     def getStrategy(self, realizationWeight):
+        strategy = [0 for _ in range(NUM_ACTIONS)]
         normalizingSum = 0
         for a in range(NUM_ACTIONS):
-            self.strategy[a] = self.regretSum[a] if self.regretSum[a] > 0 else 0
-            normalizingSum += self.strategy[a]
+            strategy[a] = self.regretSum[a] if self.regretSum[a] > 0 else 0
+            normalizingSum += strategy[a]
 
         for a in range(NUM_ACTIONS):
             if(normalizingSum > 0):
-                self.strategy[a] /= normalizingSum
+                strategy[a] /= normalizingSum
             else:
-                self.strategy[a] = 1 / NUM_ACTIONS
-            self.strategySum[a] += realizationWeight * self.strategy[a]
+                strategy[a] = 1 / NUM_ACTIONS
+            self.strategySum[a] += realizationWeight * strategy[a]
 
-        return self.strategy
+        return strategy
 
     def getAverageStrategy(self):
         averageStrategy = [0 for _ in range(NUM_ACTIONS)]

@@ -9,15 +9,18 @@ class KuhnNode():
 
     def __init__(self, infoSet):
         self.infoSet = infoSet
-        self.regretSum = [0 for _ in range(NUM_ACTIONS)]
-        self.strategy = [0 for _ in range(NUM_ACTIONS)]
-        self.strategySum = [0 for _ in range(NUM_ACTIONS)]
+        # TODO
+        # Neural network initialization
+        # self.regretSum = [0 for _ in range(NUM_ACTIONS)]
+        # self.strategySum = [0 for _ in range(NUM_ACTIONS)]
 
     def __repr__(self):
         return "CFR node for the infoset {infoset}. Strategy: {strategy}".format(infoset=self.infoSet, 
             strategy=["{:.2f}".format(x) for x in self.getAverageStrategy()])
 
     def getStrategy(self, realizationWeight):
+        # TODO
+        # Will be just a forward pass of the cumulative regret network
         normalizingSum = 0
         for a in range(NUM_ACTIONS):
             self.strategy[a] = self.regretSum[a] if self.regretSum[a] > 0 else 0
@@ -33,6 +36,8 @@ class KuhnNode():
         return self.strategy
 
     def getAverageStrategy(self):
+        # TODO
+        # forward pass of the cumulative strategy network
         averageStrategy = [0 for _ in range(NUM_ACTIONS)]
         normalizingSum = 0
         for a in range(NUM_ACTIONS):
@@ -62,6 +67,10 @@ class KuhnNode():
             elif doubleBet:
                 return 2 if isPlayerCardHigher else -2
         return None
+
+    def saveToBuffer():
+        # TODO
+        pass
 
 def cfr(cards, history, p0, p1, time):
     plays = len(history)
