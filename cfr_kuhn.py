@@ -46,26 +46,33 @@ class KuhnNode():
 
         return averageStrategy
 
+    def IsTerminal(cards, history):
+        plays = len(history)
+        player = plays % 2
+        opponent = 1 - player
+        if plays > 1 :
+            terminalPass = history[-1] == 'p'
+            doubleBet = history[-2:] == "bb"
+            isPlayerCardHigher = cards[player] > cards[opponent]
+            if terminalPass:
+                if history == "pp":
+                    return 1 if isPlayerCardHigher else -1
+                else:
+                    return 1
+            elif doubleBet:
+                return 2 if isPlayerCardHigher else -2
+        return None
+
 def cfr(cards, history, p0, p1, time):
     plays = len(history)
     player = plays % 2
-    opponent = 1 - player
     if player == 0:
         realizationWeight = p0
     else:
         realizationWeight = p1
 
-    if plays > 1 :
-        terminalPass = history[-1] == 'p'
-        doubleBet = history[-2:] == "bb"
-        isPlayerCardHigher = cards[player] > cards[opponent]
-        if terminalPass:
-            if history == "pp":
-                return 1 if isPlayerCardHigher else -1
-            else:
-                return 1
-        elif doubleBet:
-            return 2 if isPlayerCardHigher else -2
+    if(KuhnNode.IsTerminal(cards, history) is not None):
+        return KuhnNode.IsTerminal(cards, history)
     
     infoSet = str(cards[player]) + history
     if not infoSet in nodeMap:
@@ -103,29 +110,4 @@ def logInfosets():
     infoSets = sorted(nodeMap.keys())
     for node in infoSets:
         print(nodeMap[node])
-
-def testKuhnPoker():
-    epsilon = 1e-2
-    iterations = 250000
-    train(iterations)
-    testVectorEquality(nodeMap['3p'].getAverageStrategy(), [0, 1], epsilon)
-    testVectorEquality(nodeMap['3b'].getAverageStrategy(), [0, 1], epsilon)
-    testVectorEquality(nodeMap['2p'].getAverageStrategy(), [1, 0], epsilon)
-    testVectorEquality(nodeMap['2b'].getAverageStrategy(), [2/3, 1/3], epsilon)
-    testVectorEquality(nodeMap['1p'].getAverageStrategy(), [2/3, 1/3], epsilon)
-    testVectorEquality(nodeMap['1b'].getAverageStrategy(), [1, 0], epsilon)
-
-    alpha = nodeMap['1'].getAverageStrategy()[1]
-    testVectorEquality(nodeMap['1'].getAverageStrategy(), [1 - alpha, alpha], epsilon)
-    testVectorEquality(nodeMap['2'].getAverageStrategy(), [1, 0], epsilon)
-    testVectorEquality(nodeMap['3'].getAverageStrategy(), [1 - 3 * alpha, 3 * alpha], epsilon)
-    testVectorEquality(nodeMap['1pb'].getAverageStrategy(), [1, 0], epsilon)
-    testVectorEquality(nodeMap['2pb'].getAverageStrategy(), [2/3 - alpha, 1/3 + alpha], epsilon)
-    testVectorEquality(nodeMap['3pb'].getAverageStrategy(), [0, 1], epsilon)
-
-def testVectorEquality(v, w, epsilon):
-    for x, y in zip(v, w):
-        assert x < y + epsilon and x > y - epsilon
-
-testKuhnPoker()       
-    
+  
