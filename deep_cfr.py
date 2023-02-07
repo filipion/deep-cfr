@@ -1,55 +1,52 @@
 import random
 
+from tensorflow import keras
+import numpy as np
+import pandas as pd
+
 PASS = 0
 BET = 1
 NUM_ACTIONS = 2
 nodeMap = {}
 
-class KuhnNode():
+regretNet = keras.Sequential([
+    keras.layers.Dense(12, activation="relu"),
+    keras.layers.Dense(30, activation="relu"),
+    keras.layers.Dense(30, activation="relu"),
+    keras.layers.Dense(2, activation="softmax")
+])
 
+strategyNet = keras.Sequential([
+    keras.layers.Dense(12, activation="relu"),
+    keras.layers.Dense(30, activation="relu"),
+    keras.layers.Dense(30, activation="relu"),
+    keras.layers.Dense(2, activation="softmax")
+])
+
+def getStrategy(infoSet, realizationWeight):
+    encoder = KuhnEncoder()
+    return regretNet(encoder.encode(infoSet))
+
+def getAverageStrategy(infoSet, realizationWeight):
+    encoder = KuhnEncoder()
+    return strategyNet(encoder.encode(infoSet))
+
+class KuhnEncoder():
+    def __init__(self):
+        self.infostates = pd.Series(["1", "2", "3", "1p", "2p", "3p", "1b", "2b", "3b", "1pb", "2pb", "3pb"])
+    
+    def encode(self, infoState):
+        print(self.infostates, infoState)
+        return np.array(self.infostates == infoState).astype(float)
+    
+
+class KuhnNode():
     def __init__(self, infoSet):
         self.infoSet = infoSet
-        # TODO
-        # Neural network initialization
-        # self.regretSum = [0 for _ in range(NUM_ACTIONS)]
-        # self.strategySum = [0 for _ in range(NUM_ACTIONS)]
 
     def __repr__(self):
         return "CFR node for the infoset {infoset}. Strategy: {strategy}".format(infoset=self.infoSet, 
             strategy=["{:.2f}".format(x) for x in self.getAverageStrategy()])
-
-    def getStrategy(self, realizationWeight):
-        # TODO
-        # Will be just a forward pass of the cumulative regret network
-        normalizingSum = 0
-        for a in range(NUM_ACTIONS):
-            self.strategy[a] = self.regretSum[a] if self.regretSum[a] > 0 else 0
-            normalizingSum += self.strategy[a]
-
-        for a in range(NUM_ACTIONS):
-            if(normalizingSum > 0):
-                self.strategy[a] /= normalizingSum
-            else:
-                self.strategy[a] = 1 / NUM_ACTIONS
-            self.strategySum[a] += realizationWeight * self.strategy[a]
-
-        return self.strategy
-
-    def getAverageStrategy(self):
-        # TODO
-        # forward pass of the cumulative strategy network
-        averageStrategy = [0 for _ in range(NUM_ACTIONS)]
-        normalizingSum = 0
-        for a in range(NUM_ACTIONS):
-            normalizingSum += self.strategySum[a]
-
-        for a in range(NUM_ACTIONS):
-            if normalizingSum == 0:
-                averageStrategy[a] = 1 / NUM_ACTIONS
-            else:
-                averageStrategy[a] = self.strategySum[a] / normalizingSum
-
-        return averageStrategy
 
     def IsTerminal(cards, history):
         plays = len(history)
@@ -105,6 +102,8 @@ def cfr(cards, history, p0, p1, time):
     
     return nodeUtil
 
+# TODO 
+# Redo this
 def train(iterations):
     util = 0
     for i in range(iterations):
