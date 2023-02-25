@@ -117,5 +117,3 @@ def logInfosets():
     infoSets = sorted(nodeMap.keys())
     for node in infoSets:
         print(nodeMap[node])
-
-print("umm hi")
