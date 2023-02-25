@@ -65,9 +65,9 @@ class KuhnNode():
                 return 2 if isPlayerCardHigher else -2
         return None
 
-    def saveToBuffer():
-        # TODO
-        pass
+def saveToBuffer():
+    # TODO
+    pass
 
 def cfr(cards, history, p0, p1, time):
     plays = len(history)
@@ -102,8 +102,7 @@ def cfr(cards, history, p0, p1, time):
     
     return nodeUtil
 
-# TODO 
-# Redo this
+
 def train(iterations):
     util = 0
     for i in range(iterations):
@@ -118,4 +117,5 @@ def logInfosets():
     infoSets = sorted(nodeMap.keys())
     for node in infoSets:
         print(nodeMap[node])
-  
+
+print("umm hi")
