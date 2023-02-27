@@ -4,20 +4,23 @@ from tensorflow import keras
 import numpy as np
 import pandas as pd
 
+from  buffer import ReplayBuffer
+
 PASS = 0
 BET = 1
 NUM_ACTIONS = 2
+NUM_PLAYERS = 2
 nodeMap = {}
 
 regretNet = keras.Sequential([
-    keras.layers.Dense(12, activation="relu"),
+    keras.layers.Normalization(input_shape=[12, ]),
     keras.layers.Dense(30, activation="relu"),
     keras.layers.Dense(30, activation="relu"),
     keras.layers.Dense(2, activation="softmax")
 ])
 
 strategyNet = keras.Sequential([
-    keras.layers.Dense(12, activation="relu"),
+    keras.layers.Normalization(input_shape=[12, ]),
     keras.layers.Dense(30, activation="relu"),
     keras.layers.Dense(30, activation="relu"),
     keras.layers.Dense(2, activation="softmax")
@@ -34,13 +37,14 @@ def getAverageStrategy(infoSet):
 def getSample(strategy):
     return
 
+
 class KuhnEncoder():
     def __init__(self):
         self.infostates = pd.Series(["1", "2", "3", "1p", "2p", "3p", "1b", "2b", "3b", "1pb", "2pb", "3pb"])
     
     def encode(self, infoState):
-        print(self.infostates, infoState)
         return np.array(self.infostates == infoState).astype(float)
+
 
 def IsTerminal(cards, history):
     plays = len(history)
@@ -59,31 +63,27 @@ def IsTerminal(cards, history):
             return 2 if isPlayerCardHigher else -2
     return None
 
-def saveToBuffer():
-    # TODO
-    pass
 
 def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer):
     plays = len(history)
     player = plays % 2
+    infoSet = str(cards[player]) + history
+    strategy = getStrategy(infoSet)
 
     if(IsTerminal(cards, history) is not None):
         return IsTerminal(cards, history)
     elif player == traversingPlayer:
-        infoSet = str(cards[player]) + history
-        strategy = getStrategy(infoSet)
         nodeUtil = 0
         util = [0 for _ in range(NUM_ACTIONS)]
         for a in range(NUM_ACTIONS):
             nextHistory = history + ('p' if a == PASS else 'b')
             util[a] = traverse(cards, nextHistory, traversingPlayer, time, valueBuffer, strategyBuffer)
-            nodeUtil += util[a] * strategy[a]
+            print(strategy, util, a)
+            nodeUtil += util[a] * strategy[0][a]
         for a in range(NUM_ACTIONS):
             regret = util[a] - nodeUtil
             valueBuffer.insert((infoSet, time, regret))
     else:
-        infoSet = str(cards[player]) + history
-        strategy = getStrategy(infoSet)
         strategyBuffer.insert((infoSet, time, strategy))
         a = getSample(strategy)
         nextHistory = history + ('p' if a == PASS else 'b')
@@ -91,16 +91,15 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
 
 
 def train(iterations):
+    print("\n\n\n")
     util = 0
     for i in range(iterations):
         cards = [1, 2, 3]
         random.shuffle(cards)
-        util += traverse(cards, '', 1.0, 1.0, i)
-        if(i % (iterations // 10) == 0):
-            print("Iteration number: {}/{}".format(i, iterations))
-            print("Avg, utility for player 1: {:.4f}".format(util / (i + 1)))
+        valBuffer = ReplayBuffer(1000)
+        stratBuffer = ReplayBuffer(1000)
+        for traversingPlayer in range(NUM_PLAYERS): 
+            traverse(cards, '', traversingPlayer, i, valBuffer, stratBuffer)
 
-def logInfosets():
-    infoSets = sorted(nodeMap.keys())
-    for node in infoSets:
-        print(nodeMap[node])
+train(100)
+
