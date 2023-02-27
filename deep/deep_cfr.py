@@ -46,12 +46,11 @@ class KuhnEncoder():
         return np.array(self.infostates == infoState).astype(float)
 
 
-def IsTerminal(cards, history):
+def IsTerminal(cards, history, player):
     plays = len(history)
-    player = plays % 2
     opponent = 1 - player
     if plays > 1 :
-        terminalPass = history[-1] == 'p'
+        terminalPass = history[-1] == "p"
         doubleBet = history[-2:] == "bb"
         isPlayerCardHigher = cards[player] > cards[opponent]
         if terminalPass:
@@ -61,7 +60,8 @@ def IsTerminal(cards, history):
                 return 1
         elif doubleBet:
             return 2 if isPlayerCardHigher else -2
-    return None
+    else:
+        return None
 
 
 def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer):
@@ -70,8 +70,8 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
     infoSet = str(cards[player]) + history
     strategy = getStrategy(infoSet)
 
-    if(IsTerminal(cards, history) is not None):
-        return IsTerminal(cards, history)
+    if(IsTerminal(cards, history, traversingPlayer) is not None):
+        return IsTerminal(cards, history, traversingPlayer)
     elif player == traversingPlayer:
         nodeUtil = 0
         util = [0 for _ in range(NUM_ACTIONS)]
@@ -83,6 +83,7 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
         for a in range(NUM_ACTIONS):
             regret = util[a] - nodeUtil
             valueBuffer.insert((infoSet, time, regret))
+        return nodeUtil
     else:
         strategyBuffer.insert((infoSet, time, strategy))
         a = getSample(strategy)
@@ -102,4 +103,3 @@ def train(iterations):
             traverse(cards, '', traversingPlayer, i, valBuffer, stratBuffer)
 
 train(100)
-
