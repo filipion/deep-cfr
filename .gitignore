@@ -1,1 +1,3 @@
 __pycache__/*.pyc
+.spyproject
+deep/worksheet.py

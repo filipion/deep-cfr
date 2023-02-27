@@ -1,5 +1,5 @@
 import random
-
+import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import pandas as pd
@@ -28,19 +28,23 @@ strategyNet = keras.Sequential([
 
 def getStrategy(infoSet):
     encoder = KuhnEncoder()
-    return regretNet(encoder.encode(infoSet))
+    return tf.reshape(regretNet(encoder.encode(infoSet)), (NUM_ACTIONS,))
 
 def getAverageStrategy(infoSet):
     encoder = KuhnEncoder()
-    return strategyNet(encoder.encode(infoSet))
+    return tf.reshape(strategyNet(encoder.encode(infoSet)), (NUM_ACTIONS,))
 
 def getSample(strategy):
-    return
+    cum_probs = tf.cumsum(strategy)
+    rand_num = tf.random.uniform([], 0, 1)
+    i = tf.argmax(cum_probs > rand_num)
+    return i
 
 
 class KuhnEncoder():
     def __init__(self):
-        self.infostates = pd.Series(["1", "2", "3", "1p", "2p", "3p", "1b", "2b", "3b", "1pb", "2pb", "3pb"])
+        self.infostates = pd.Series(["1", "2", "3", "1p", "2p", "3p", 
+                                     "1b", "2b", "3b", "1pb", "2pb", "3pb"])
     
     def encode(self, infoState):
         return np.array(self.infostates == infoState).astype(float)
@@ -77,9 +81,10 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
         util = [0 for _ in range(NUM_ACTIONS)]
         for a in range(NUM_ACTIONS):
             nextHistory = history + ('p' if a == PASS else 'b')
-            util[a] = traverse(cards, nextHistory, traversingPlayer, time, valueBuffer, strategyBuffer)
+            util[a] = traverse(cards, nextHistory, traversingPlayer, time, 
+                valueBuffer, strategyBuffer)
             print(strategy, util, a)
-            nodeUtil += util[a] * strategy[0][a]
+            nodeUtil += util[a] * strategy[a]
         for a in range(NUM_ACTIONS):
             regret = util[a] - nodeUtil
             valueBuffer.insert((infoSet, time, regret))
@@ -88,12 +93,12 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
         strategyBuffer.insert((infoSet, time, strategy))
         a = getSample(strategy)
         nextHistory = history + ('p' if a == PASS else 'b')
-        return traverse(cards, nextHistory, traversingPlayer, time, valueBuffer, strategyBuffer)
+        return traverse(cards, nextHistory, traversingPlayer, time, 
+                        valueBuffer, strategyBuffer)
 
 
 def train(iterations):
     print("\n\n\n")
-    util = 0
     for i in range(iterations):
         cards = [1, 2, 3]
         random.shuffle(cards)
