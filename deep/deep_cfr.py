@@ -16,15 +16,16 @@ regretNet = keras.Sequential([
     keras.layers.Normalization(input_shape=[12, ]),
     keras.layers.Dense(30, activation="relu"),
     keras.layers.Dense(30, activation="relu"),
-    keras.layers.Dense(2, activation="softmax")
+    keras.layers.Dense(2, activation="sigmoid")
 ])
 
-strategyNet = keras.Sequential([
-    keras.layers.Normalization(input_shape=[12, ]),
-    keras.layers.Dense(30, activation="relu"),
-    keras.layers.Dense(30, activation="relu"),
-    keras.layers.Dense(2, activation="softmax")
-])
+regretNet.compile(
+    optimizer=keras.optimizers.RMSprop(),
+    loss=keras.losses.SparseCategoricalCrossentropy(),
+    metrics=[keras.metrics.SparseCategoricalAccuracy()],
+)
+
+strategyNet = keras.models.clone_model(regretNet)
 
 def getStrategy(infoSet):
     encoder = KuhnEncoder()
@@ -79,14 +80,14 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
     elif player == traversingPlayer:
         nodeUtil = 0
         util = [0 for _ in range(NUM_ACTIONS)]
+        regret = [0 for _ in range(NUM_ACTIONS)]
         for a in range(NUM_ACTIONS):
             nextHistory = history + ('p' if a == PASS else 'b')
             util[a] = traverse(cards, nextHistory, traversingPlayer, time, 
                 valueBuffer, strategyBuffer)
-            print(strategy, util, a)
             nodeUtil += util[a] * strategy[a]
         for a in range(NUM_ACTIONS):
-            regret = util[a] - nodeUtil
+            regret[a] = util[a] - nodeUtil
             valueBuffer.insert((infoSet, time, regret))
         return nodeUtil
     else:
@@ -97,14 +98,19 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
                         valueBuffer, strategyBuffer)
 
 
-def train(iterations):
+def train(inner_iterations, outer_iterations):
     print("\n\n\n")
-    for i in range(iterations):
-        cards = [1, 2, 3]
-        random.shuffle(cards)
-        valBuffer = ReplayBuffer(1000)
-        stratBuffer = ReplayBuffer(1000)
-        for traversingPlayer in range(NUM_PLAYERS): 
-            traverse(cards, '', traversingPlayer, i, valBuffer, stratBuffer)
+    for i in range(outer_iterations):
+        valBuffer = ReplayBuffer(100)
+        stratBuffer = ReplayBuffer(100)
+        for j in range(inner_iterations):
+            cards = [1, 2, 3]
+            random.shuffle(cards)
+            
+            for traversingPlayer in range(NUM_PLAYERS): 
+                traverse(cards, '', traversingPlayer, j, 
+                        valBuffer, stratBuffer)
+            # train value net
+        # train strategy net
 
-train(100)
+    return valBuffer
