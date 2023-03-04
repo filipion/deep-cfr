@@ -1,4 +1,9 @@
 __pycache__/*.pyc
 .spyproject
 deep/worksheet.py
+deep/__pycache__/
 deep/__pycache__/*
+.ipynb_checkpoints/kuhn_poker_test-checkpoint.py
+deep/.ipynb_checkpoints/
+*.ipynb
+deep/__pycache__/buffer.cpython-39.pyc
