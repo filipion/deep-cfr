@@ -15,7 +15,7 @@ NUM_PLAYERS = 2
 nodeMap = {}
 
 
-def getStrategy(infoSet):
+def getStrategy(infoSet, regretNet):
     encoder = KuhnEncoder()
     regrets = tf.reshape(regretNet(encoder.encode(infoSet)), (NUM_ACTIONS,))
     regrets = tf.nn.relu(regrets)
@@ -25,7 +25,7 @@ def getStrategy(infoSet):
     return strategy
     
 
-def getAverageStrategy(infoSet):
+def getAverageStrategy(infoSet, strategyNet):
     encoder = KuhnEncoder()
     regrets = tf.reshape(strategyNet(encoder.encode(infoSet)), (NUM_ACTIONS,))
     regret_sum = tf.sum(regrets)
@@ -80,11 +80,11 @@ def generateDataset(buffer, validation_fraction=3/4):
 
 
 # %%
-def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer):
+def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer, regretNet):
     plays = len(history)
     player = plays % 2
     infoSet = str(cards[player]) + history
-    strategy = getStrategy(infoSet)
+    strategy = getStrategy(infoSet, regretNet)
 
     if(IsTerminal(cards, history, traversingPlayer) is not None):
         return IsTerminal(cards, history, traversingPlayer)
@@ -95,7 +95,7 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
         for a in range(NUM_ACTIONS):
             nextHistory = history + ('p' if a == PASS else 'b')
             util[a] = traverse(cards, nextHistory, traversingPlayer, time, 
-                valueBuffer, strategyBuffer)
+                valueBuffer, strategyBuffer, regretNet)
             nodeUtil += util[a] * strategy[a]
         for a in range(NUM_ACTIONS):
             regret[a] = util[a] - nodeUtil
@@ -106,7 +106,7 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
         a = getSample(strategy)
         nextHistory = history + ('p' if a == PASS else 'b')
         return traverse(cards, nextHistory, traversingPlayer, time, 
-                        valueBuffer, strategyBuffer)
+                        valueBuffer, strategyBuffer, regretNet)
 
 
 def train(inner_iterations, outer_iterations):
@@ -144,7 +144,7 @@ def train(inner_iterations, outer_iterations):
             random.shuffle(cards)
             
             for traversingPlayer in range(NUM_PLAYERS): 
-                traverse(cards, '', traversingPlayer, j, valBuffer, stratBuffer)
+                traverse(cards, '', traversingPlayer, j, valBuffer, stratBuffer, regretNet)
         
         (x_train, y_train), (x_val, y_val) = generateDataset(valBuffer)
         regretNet.fit(
@@ -170,3 +170,5 @@ def train(inner_iterations, outer_iterations):
 
 # %%
 _, buffer = train(50, 1)
+
+# %%
