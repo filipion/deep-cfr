@@ -27,8 +27,9 @@ def getStrategy(infoSet, regretNet):
 
 def getAverageStrategy(infoSet, strategyNet):
     encoder = KuhnEncoder()
-    regrets = tf.reshape(strategyNet(encoder.encode(infoSet)), (NUM_ACTIONS,))
-    regret_sum = tf.sum(regrets)
+    strategy = tf.reshape(strategyNet(encoder.encode(infoSet)), (NUM_ACTIONS,))
+    strategy, _ = tf.linalg.normalize(strategy, ord=1)
+    return strategy
     
 
 def getSample(strategy):
@@ -58,7 +59,7 @@ def IsTerminal(cards, history, player):
             if history == "pp":
                 return 1 if isPlayerCardHigher else -1
             else:
-                return 1
+                return -1 if plays == 3 else 1
         elif doubleBet:
             return 2 if isPlayerCardHigher else -2
     else:
@@ -166,9 +167,43 @@ def train(inner_iterations, outer_iterations):
     )
         
     # train strategy net
-    return valBuffer, stratBuffer
+    return valBuffer, stratBuffer, strategyNet
 
 # %%
-_, buffer = train(50, 1)
+strategyNet = keras.Sequential([
+        keras.layers.Normalization(input_shape=[12, ]),
+        keras.layers.Dense(30, activation="relu"),
+        keras.layers.Dense(30, activation="relu"),
+        keras.layers.Dense(2, activation="sigmoid")
+    ])
 
+strategyNet.compile(
+        optimizer=keras.optimizers.RMSprop(),
+        loss=keras.losses.MeanSquaredError(),
+    )
+
+
+def simulate_game(agents, result_player):
+    cards = [1, 2, 3]
+    random.shuffle(cards)
+    history = ''
+    player = 0
+    while(IsTerminal(cards, history, player) is None):
+        infoSet = str(cards[player]) + history
+        strategy = getAverageStrategy(infoSet, agents[player])
+        a = getSample(strategy)
+        history = history + ('p' if a == PASS else 'b')
+        player = 1 - player
+    
+    print(cards, history, IsTerminal(cards, history, result_player))
+    return IsTerminal(cards, history, result_player)
+
+def rollout(agents, num_rollouts=100):
+    p1_victories = 0
+    for i in range(num_rollouts):
+        if simulate_game(agents, 0) > 0:
+            p1_victories += 1
+    return p1_victories
+
+print(rollout([strategyNet, strategyNet], num_rollouts=10000))
 # %%
