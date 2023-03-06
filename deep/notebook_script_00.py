@@ -59,7 +59,7 @@ def IsTerminal(cards, history, player):
             if history == "pp":
                 return 1 if isPlayerCardHigher else -1
             else:
-                return -1 if plays == 3 else 1
+                return -1 if plays % 2 != player else 1
         elif doubleBet:
             return 2 if isPlayerCardHigher else -2
     else:
@@ -195,15 +195,16 @@ def simulate_game(agents, result_player):
         history = history + ('p' if a == PASS else 'b')
         player = 1 - player
     
-    print(cards, history, IsTerminal(cards, history, result_player))
     return IsTerminal(cards, history, result_player)
 
-def rollout(agents, num_rollouts=100):
-    p1_victories = 0
+def rollout(agents, num_rollouts, result_player):
+    victories = 0
     for i in range(num_rollouts):
-        if simulate_game(agents, 0) > 0:
-            p1_victories += 1
-    return p1_victories
+        if simulate_game(agents, result_player) > 0:
+            victories += 1
+    return victories
 
-print(rollout([strategyNet, strategyNet], num_rollouts=10000))
-# %%
+def symmetric_rollout(agents, num_rollouts=50):
+    return rollout(agents, num_rollouts, 0) + rollout(agents, num_rollouts, 1)
+
+print(symmetric_rollout([strategyNet, strategyNet], 500))
