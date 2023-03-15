@@ -1,3 +1,4 @@
+
 # %%
 import random
 import tensorflow as tf
@@ -12,6 +13,7 @@ PASS = 0
 BET = 1
 NUM_ACTIONS = 2
 NUM_PLAYERS = 2
+INFOSTATES = ["1", "2", "3", "1p", "2p", "3p", "1b", "2b", "3b", "1pb", "2pb", "3pb"]
 nodeMap = {}
 
 
@@ -41,8 +43,7 @@ def getSample(strategy):
 
 class KuhnEncoder():
     def __init__(self):
-        self.infostates = pd.Series(["1", "2", "3", "1p", "2p", "3p", 
-                                     "1b", "2b", "3b", "1pb", "2pb", "3pb"])
+        self.infostates = pd.Series(INFOSTATES)
     
     def encode(self, infoState):
         return np.array(self.infostates == infoState).astype(float)
@@ -70,12 +71,11 @@ def IsTerminal(cards, history, player):
 def generateDataset(buffer, validation_fraction=3/4):
     x, y = [], []
     random.shuffle(buffer.data)
-    splitIdx = int(buffer.size * validation_fraction)
     for (i, t, sigma) in buffer.data:
         x.append(KuhnEncoder().encode(i))
         y.append(sigma)
     x, y = np.array(x), np.array(y)
-    return (x[:splitIdx], y[:splitIdx]), (x[splitIdx:], y[splitIdx:])
+    return x, y
 
 def plot_metric(history, metric, network_name):
     train_metrics = history.history[metric]
@@ -83,11 +83,15 @@ def plot_metric(history, metric, network_name):
     epochs = range(1, len(train_metrics) + 1)
     plt.plot(epochs, train_metrics)
     plt.plot(epochs, val_metrics)
+    ax = plt.gca()
+    ax.set_ylim([0, 1])
     plt.title('Training and validation {}: {}'.format(metric, network_name))
     plt.xlabel("Epochs")
     plt.ylabel(metric)
     plt.legend(["train_"+metric, 'val_'+metric])
     plt.show()
+
+
 
 
 # %%
@@ -121,14 +125,12 @@ def traverse(cards, history, traversingPlayer, time, valueBuffer, strategyBuffer
 
 
 # %%
-def train(inner_iterations, outer_iterations, strategyNet):
-    stratBuffer = ReplayBuffer(500)
+def train(inner_iterations, outer_iterations, strategyNet, logger):
+    stratBuffer = ReplayBuffer(400)
+    valBuffer = ReplayBuffer(100)
     
     regretNet = keras.Sequential([
         keras.layers.Normalization(input_shape=[12, ]),
-        keras.layers.Dense(32, activation="relu"),
-        keras.layers.Dense(32, activation="relu"),
-        keras.layers.Dense(32, activation="relu"),
         keras.layers.Dense(32, activation="relu"),
         keras.layers.Dense(2)
     ])
@@ -139,7 +141,6 @@ def train(inner_iterations, outer_iterations, strategyNet):
     )
     
     for _ in range(outer_iterations):
-        valBuffer = ReplayBuffer(200)
         for j in range(inner_iterations):
             cards = [1, 2, 3]
             random.shuffle(cards)
@@ -147,40 +148,38 @@ def train(inner_iterations, outer_iterations, strategyNet):
             for traversingPlayer in range(NUM_PLAYERS): 
                 traverse(cards, '', traversingPlayer, j, valBuffer, stratBuffer, regretNet)
         
-        (x_train, y_train), (x_val, y_val) = generateDataset(valBuffer)
+        x_train, y_train = generateDataset(valBuffer)
         history = regretNet.fit(
             x_train,
             y_train,
             batch_size=16,
             epochs=20,
-            validation_data=(x_val,y_val),
+            validation_split=0.5
             #callbacks=[tf.keras.callbacks.EarlyStopping()]
         )
         plot_metric(history, 'loss', 'Value Net')
     
     print("Finally, training the strategy.")
-    (x_train, y_train), (x_val, y_val) = generateDataset(stratBuffer)
+    x_train, y_train = generateDataset(stratBuffer)
     print(stratBuffer.data)
     history = strategyNet.fit(
         x_train,
         y_train,
         batch_size=16,
         epochs=100,
-        validation_data=(x_val,y_val),
+        validation_split=0.25,
         # callbacks=[tf.keras.callbacks.EarlyStopping()]
     )
     plot_metric(history, 'loss', 'Strategy Net')
         
     # train strategy net
-    return valBuffer, stratBuffer, strategyNet
+    return valBuffer, stratBuffer, strategyNet, logger
 
 # %%
 strategyNet = keras.Sequential([
     keras.layers.Normalization(input_shape=[12, ]),
     keras.layers.Dense(64, activation="relu"),
     keras.layers.Dense(64, activation="relu"),
-    keras.layers.Dense(32, activation="relu"),
-    keras.layers.Dense(32, activation="relu"),
     keras.layers.Dense(2, activation="sigmoid")
 ])
 
@@ -201,7 +200,7 @@ untrained.compile(
     loss=keras.losses.MeanSquaredError(),
 )
 
-
+# %%
 def simulate_game(agents, result_player):
     cards = [1, 2, 3]
     random.shuffle(cards)
@@ -220,7 +219,7 @@ def rollout(agents, num_rollouts, result_player):
     victories = 0
     for i in range(num_rollouts):
         if i % 10 == 0:
-            print("simulating {}th game".format(i))
+            print("simulating {}th game".format(i), flush=True)
         if simulate_game(agents, result_player) > 0:
             victories += 1
     return victories
@@ -229,7 +228,19 @@ def symmetric_rollout(agents, num_rollouts=50):
     return rollout(agents, num_rollouts, 0) + rollout(agents, num_rollouts, 1)
 
 
-_, strat_buffer, _ = train(100, 10, strategyNet)
-print(symmetric_rollout([strategyNet, untrained], 500))
+# %%
+logger = []
+_, strat_buffer, _, logger = train(100, 10, strategyNet, logger)
+
 
 # %%
+def plot_strategy(strategyNet):
+    for i in INFOSTATES:
+        strategy = getAverageStrategy(i, strategyNet)
+        print(i, strategy)
+
+plot_strategy(strategyNet)
+
+# %%
+print(rollout([untrained, untrained], 1000, 0))
+print(rollout([strategyNet, untrained], 1000, 0))

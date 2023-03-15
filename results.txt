@@ -1,0 +1,7 @@
+Training run 1:
+
+1pb, 2pb, 3pb: look great
+1, 2, 3: 2 is wrong
+3p, 3b: great, probably perfectible
+1p, 1b: Looks surprisingly good, could be retested
+2p, 2b: are totally wrong
